@@ -3,39 +3,25 @@ from selenium.webdriver.common.by import By
 import time
 import datetime
 import csv
+import os
+from graph_drawer import GraphDrawer
 
-# ============================= NUMBER 1 get the data from speedtest =============================
+# ============================= NUMBER 1 set data variables for the code =============================
 
-# variables from my promised Xfinity plan
-promised_download = 600
+promised_download = 400
 promised_upload = 35
 
-download_speed_list = []
-upload_speed_list = []
-data = {}
+data = []  # Initialized as a list
 is_enough = True
-
 counter = 0
 
-# ============================= NUMBER 2 gather that data for 4 days =============================
+# ============================= NUMBER 2 gather that data for 7 days =============================
 
-# # 2.1 The data needs to be gathered every 4 hours
-    # Sleep for 6 hours
-    # 6 hrs * 4 iteration = 24 hrs / 1 day
-    # 16 iterations = 4 days
-# # 2.2 This data needs to be into the dictionary format
-    # data = {
-    #   0: {
-    #       "date": YYYY-MM-DD,
-    #       "time": HH:MM:SS,
-    #       "download_speed": SSS,
-    #       "upload_speed": SSS
-    #   }
-    # }
-# # 2.3 The data also converts the dictionary to the CSV file
+file_exists = os.path.isfile('data.csv')
 
-# Condition for the loop since for now the project is not constantly-updating
 while is_enough:
+    counter += 1
+
     driver = webdriver.Safari()
     URL = 'https://www.speedtest.net/'
     driver.get(URL)
@@ -44,43 +30,40 @@ while is_enough:
     button = button_div.find_element(By.TAG_NAME, "a")
     button.click()
     time.sleep(50)
-    
-    download_speed = driver.find_element(By.XPATH, '//*[@id="container"]/div/div[3]/div/div'
-                                                   '/div/div[2]/div[3]/div[3]/div/div[3]/div/'
-                                                   'div/div[2]/div[1]/div[1]/div/div[2]/span').text
-    upload_speed = driver.find_element(By.XPATH, '//*[@id="container"]/div/div[3]/div/div/div/div[2]/div[3'
-                                                 ']/div[3]/div/div[3]/div/div/div[2]/div'
-                                                 '[1]/div[2]/div/div[2]/span').text
-    
-    # Create a dictionary for the data
+
+    download_speed = driver.find_element(By.XPATH, '//*[@id="container"]/div/div[3]/div/div/div/div[2]/div[3]/div[3]/div/div[3]/div/div/div[2]/div[1]/div[1]/div/div[2]/span').text
+    upload_speed = driver.find_element(By.XPATH, '//*[@id="container"]/div/div[3]/div/div/div/div[2]/div[3]/div[3]/div/div[3]/div/div/div[2]/div[1]/div[2]/div/div[2]/span').text
+
+    # Append a new dictionary to the list
     current_time = datetime.datetime.now()
-    data[counter] = {
+    data_point = {
         "date": current_time.strftime('%Y-%m-%d'),
         "time": current_time.strftime('%H:%M:%S'),
         "download_speed": float(download_speed),
         "upload_speed": float(upload_speed)
     }
-    # Close the window 
+    data.append(data_point)  # Add data point to the list
+
+    # Close the window
     driver.quit()
 
-    if counter >= 16: # 16 iterations = 4 days
-        # break the loop after 3 days of gathering data
-        is_enough = False
+    # create CSV file that will update with dictionary
+    with open('data.csv', 'a', newline='') as csvfile:
+        fieldnames = ['date', 'time', 'download_speed', 'upload_speed']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
-    counter += 1
-    # time.sleep(20)
-    time.sleep(6 * 60 * 60)
+        # If the file did not exist previously, write the header
+        if not file_exists:
+            writer.writeheader()
 
-print(data)
+        writer.writerow(data_point)
+    if counter >= 4:  # 28 iterations = 7 days
+        # Initialize GraphDrawer here after you've collected some data
+        graph_drawer = GraphDrawer(data, promised_download, promised_upload)
+        graph_drawer.check_data_and_plot()
 
-# ============================= NUMBER 3 make the CSV file =============================
+    time.sleep(10)
+    # 6 hrs break
+    # time.sleep(6 * 60 * 60)
 
-with open('data.csv', 'w', newline='') as csvfile:
-    fieldnames = ['date', 'time', 'download_speed', 'upload_speed']
-    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-
-    writer.writeheader()
-    for key, value in data.items():
-        writer.writerow(value)
-
-# ============================= NUMBER 4 make a graph out of the CSV data =============================
+    print(data)
