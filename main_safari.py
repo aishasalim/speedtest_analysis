@@ -16,9 +16,7 @@ is_enough = True
 counter = 0
 
 # ============================= NUMBER 2 gather that data for 7 days =============================
-
-file_exists = os.path.isfile('data.csv')
-
+graph_drawer = GraphDrawer(data, promised_download, promised_upload)
 while is_enough:
     counter += 1
 
@@ -47,23 +45,26 @@ while is_enough:
     # Close the window
     driver.quit()
 
+    file_exists = os.path.isfile('data.csv')
     # create CSV file that will update with dictionary
     with open('data.csv', 'a', newline='') as csvfile:
         fieldnames = ['date', 'time', 'download_speed', 'upload_speed']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-
         # If the file did not exist previously, write the header
         if not file_exists:
             writer.writeheader()
 
         writer.writerow(data_point)
-    if counter >= 4:  # 28 iterations = 7 days
-        # Initialize GraphDrawer here after you've collected some data
-        graph_drawer = GraphDrawer(data, promised_download, promised_upload)
+    if counter >= 28 * 4:
+        graph_drawer.line_graph()
+    elif counter >= 4:  # 28 iterations = 7 days
         graph_drawer.check_data_and_plot()
 
-    time.sleep(10)
+
+   #  time.sleep(10)
     # 6 hrs break
-    # time.sleep(6 * 60 * 60)
+    time.sleep(6 * 60 * 60)
 
     print(data)
+
+
